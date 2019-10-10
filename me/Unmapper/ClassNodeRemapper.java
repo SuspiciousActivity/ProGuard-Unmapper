@@ -288,7 +288,7 @@ public class ClassNodeRemapper {
 	private void remapInstruction(String clazz, AbstractInsnNode n) {
 		if (FieldInsnNode.class.isInstance(n)) {
 			FieldInsnNode node = (FieldInsnNode) n;
-			node.name = getOldMemberName(new MemberData(clazz, node.desc, node.name));
+			node.name = getOldMemberName(new MemberData(node.owner, node.desc, node.name));
 			node.desc = getOldMemberFieldDesc(node.desc);
 			node.owner = getOldClassName(node.owner);
 		} else if (FrameNode.class.isInstance(n)) {
@@ -360,7 +360,7 @@ public class ClassNodeRemapper {
 			}
 		} else if (MethodInsnNode.class.isInstance(n)) {
 			MethodInsnNode node = (MethodInsnNode) n;
-			node.name = getOldMemberName(new MemberData(clazz, node.desc, node.name));
+			node.name = getOldMemberName(new MemberData(node.owner, node.desc, node.name));
 			node.desc = getOldMemberMethodDesc(node.desc);
 			node.owner = getOldClassName(node.owner);
 		} else if (TypeInsnNode.class.isInstance(n)) {

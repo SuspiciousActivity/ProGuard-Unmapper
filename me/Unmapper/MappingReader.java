@@ -110,11 +110,20 @@ public class MappingReader {
 	}
 
 	private String getOldClassName(String name) {
+		int arrayCount = 0;
+		int arrayIdx = name.lastIndexOf('[');
+		while (arrayIdx >= 0) {
+			arrayCount++;
+			name = name.substring(0, arrayIdx);
+			arrayIdx = name.lastIndexOf('[');
+		}
 		name = name.replace('.', '/');
 		String old = internalReversedClassMappings.get(name);
-		if (old != null)
-			return old;
-		return name;
+		if (old == null)
+			old = name;
+		for (int i = 0; i < arrayCount; i++)
+			old += "[]";
+		return old;
 	}
 
 	private String convertTypeToByteCode(String type) {
