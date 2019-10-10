@@ -19,6 +19,23 @@ public class MappingReader {
 	}
 
 	public void load() throws IOException {
+		// Read all the class mappings
+		try (BufferedReader read = new BufferedReader(new FileReader(mappingFile))) {
+			String s;
+
+			while ((s = read.readLine()) != null) {
+				s = s.trim();
+
+				if (s.startsWith("#"))
+					continue;
+
+				if (s.endsWith(":")) {
+					parseClassMapping(s);
+				}
+			}
+		}
+		// Read member mappings in a second run, we first had to read ALL class mappings
+		// for this to work properly
 		try (BufferedReader read = new BufferedReader(new FileReader(mappingFile))) {
 			String className = null;
 			String s;
@@ -30,7 +47,7 @@ public class MappingReader {
 					continue;
 
 				if (s.endsWith(":")) {
-					className = parseClassMapping(s);
+					className = getClassMapping(s);
 				} else if (className != null) {
 					parseClassMemberMapping(className, s);
 				}
@@ -38,7 +55,25 @@ public class MappingReader {
 		}
 	}
 
-	private String parseClassMapping(String s) {
+	private void parseClassMapping(String s) {
+		int splitIdx = s.indexOf("->");
+		if (splitIdx < 0) {
+			return;
+		}
+
+		int colonIndex = s.indexOf(':', splitIdx + 2);
+		if (colonIndex < 0) {
+			return;
+		}
+
+		String originalName = s.substring(0, splitIdx).trim().replace('.', '/');
+		String obfuscatedName = s.substring(splitIdx + 2, colonIndex).trim().replace('.', '/');
+
+		classMappings.put(obfuscatedName, originalName);
+		internalReversedClassMappings.put(originalName, obfuscatedName);
+	}
+
+	private String getClassMapping(String s) {
 		int splitIdx = s.indexOf("->");
 		if (splitIdx < 0) {
 			return null;
@@ -50,10 +85,6 @@ public class MappingReader {
 		}
 
 		String originalName = s.substring(0, splitIdx).trim().replace('.', '/');
-		String obfuscatedName = s.substring(splitIdx + 2, colonIndex).trim().replace('.', '/');
-
-		classMappings.put(obfuscatedName, originalName);
-		internalReversedClassMappings.put(originalName, obfuscatedName);
 
 		return originalName;
 	}
