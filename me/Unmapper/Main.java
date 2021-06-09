@@ -23,17 +23,30 @@ public class Main implements Opcodes {
 	private static MappingReader mapping;
 
 	public static boolean removeLocals = false;
+	public static boolean fakeJava8 = false;
 
 	public static void main(String[] args) throws Exception {
 		if (args.length < 3) {
 			System.out.println("Syntax: input.jar mapping.txt output.jar (-l)");
 			System.out.println("\t-l\tRemoves local variables which are not ASCII");
 			System.out.println("\t\t\t(let the decompilers generate better names)");
+			System.out.println("\t-j\tFake Java 8 class version");
+			System.out.println("\t\t\t(JDGUI doesn't really work without this)");
 			System.exit(1);
 		}
 		if (args.length > 3) {
-			removeLocals = args[3].equalsIgnoreCase("-l");
-			System.out.println("Enabled local variable removal.");
+			for (int i = 3; i < args.length; i++) {
+				switch (args[i].toLowerCase()) {
+				case "-l":
+					removeLocals = true;
+					System.out.println("Enabled local variable removal.");
+					break;
+				case "-j":
+					fakeJava8 = true;
+					System.out.println("Enabled fake Java 8.");
+					break;
+				}
+			}
 		}
 		load(new File(args[0]));
 		map(new File(args[1]));

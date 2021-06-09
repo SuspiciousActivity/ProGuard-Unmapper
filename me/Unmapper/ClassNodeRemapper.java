@@ -1,6 +1,5 @@
 package me.Unmapper;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,6 +42,8 @@ public class ClassNodeRemapper {
 		cn.name = getOldClassName(cn.name);
 		cn.superName = getOldClassName(cn.superName);
 		cn.signature = getOldSignature(cn.signature);
+		if (Main.fakeJava8)
+			cn.version = 52;
 		if (!cn.interfaces.isEmpty()) {
 			List<String> newInterfaces = new ArrayList<String>();
 			for (String s : cn.interfaces) {
@@ -65,8 +66,6 @@ public class ClassNodeRemapper {
 		}
 	}
 
-	private static final int ACC_STATIC = 0x0008;
-
 	private void remapMethods(ClassNode cn) {
 		if (cn.methods == null)
 			return;
@@ -84,19 +83,15 @@ public class ClassNodeRemapper {
 				mn.exceptions = newExceptions;
 			}
 			if (mn.localVariables != null && !mn.localVariables.isEmpty()) {
-				Iterator<LocalVariableNode> lvns = mn.localVariables.iterator();
-				while (lvns.hasNext()) {
-					LocalVariableNode lvn = lvns.next();
-					if (Main.removeLocals) {
-						if ((mn.access & ACC_STATIC) == 0 && lvn.index == 0) { // "this" for non-static methods
-							lvn.name = "this"; // should always be "this"
-						} else if (!isAscii(lvn.name)) {
-							lvns.remove();
-							continue;
-						}
+				if (Main.removeLocals) {
+					mn.localVariables.clear();
+				} else {
+					Iterator<LocalVariableNode> lvns = mn.localVariables.iterator();
+					while (lvns.hasNext()) {
+						LocalVariableNode lvn = lvns.next();
+						lvn.desc = getOldMemberFieldDesc(lvn.desc);
+						lvn.signature = getOldSignature(lvn.signature);
 					}
-					lvn.desc = getOldMemberFieldDesc(lvn.desc);
-					lvn.signature = getOldSignature(lvn.signature);
 				}
 			}
 			if (mn.tryCatchBlocks != null && !mn.tryCatchBlocks.isEmpty()) {
@@ -120,14 +115,6 @@ public class ClassNodeRemapper {
 			fn.desc = getOldMemberFieldDesc(fn.desc);
 			fn.signature = getOldSignature(fn.signature);
 		}
-	}
-
-	private boolean isAscii(String s) {
-		for (char c : s.toCharArray()) {
-			if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')))
-				return false;
-		}
-		return true;
 	}
 
 	private String getOldClassName(String name) {
@@ -337,20 +324,7 @@ public class ClassNodeRemapper {
 				Object o = node.bsmArgs[i];
 				if (o instanceof Type) {
 					Type type = (Type) o;
-					try {
-						Field f_off = Type.class.getDeclaredField("off");
-						f_off.setAccessible(true);
-						Field f_len = Type.class.getDeclaredField("len");
-						f_len.setAccessible(true);
-						Field f_buf = Type.class.getDeclaredField("buf");
-						f_buf.setAccessible(true);
-						String buf = new String((char[]) f_buf.get(type));
-						String oldBuf = getOldClassName(buf);
-						f_buf.set(type, oldBuf.toCharArray());
-						f_len.set(type, oldBuf.length());
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
+					node.bsmArgs[i] = Type.getType(getOldSignature(type.getDescriptor()));
 				} else if (o instanceof Handle) {
 					Handle h = (Handle) o;
 					node.bsmArgs[i] = new Handle(h.getTag(), getOldClassName(h.getOwner()),
@@ -373,20 +347,7 @@ public class ClassNodeRemapper {
 			LdcInsnNode node = (LdcInsnNode) n;
 			if (node.cst instanceof Type) {
 				Type type = (Type) node.cst;
-				try {
-					Field f_off = Type.class.getDeclaredField("off");
-					f_off.setAccessible(true);
-					Field f_len = Type.class.getDeclaredField("len");
-					f_len.setAccessible(true);
-					Field f_buf = Type.class.getDeclaredField("buf");
-					f_buf.setAccessible(true);
-					String buf = new String((char[]) f_buf.get(type));
-					String oldBuf = getOldClassName(buf);
-					f_buf.set(type, oldBuf.toCharArray());
-					f_len.set(type, oldBuf.length());
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+				node.cst = Type.getType(getOldSignature(type.getDescriptor()));
 			}
 		}
 	}
